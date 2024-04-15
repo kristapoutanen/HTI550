@@ -4,11 +4,8 @@ from dash import html
 import folium
 
 # Read the JSON file
-with open('data.json', 'r', encoding='utf-8') as file:
-    data = json.load(file)
-
-# Access the data section
-data_rows = data['data']
+#with open('data.json', 'r', encoding='utf-8') as file:
+#    data = json.load(file)
 
 
 # Define the coordinates for Tampere, Finland
@@ -24,7 +21,7 @@ m_html = m._repr_html_()
 # Create Dash app
 app = dash.Dash(__name__)
 
-# Define the layout of the app
+# Define the layout of the Dash app
 app.layout = html.Div([
     # Left section for header, description, and statistics
     html.Div([
