@@ -1,9 +1,10 @@
 import dash
 from dash import html, dcc, Input, Output
+from data_handler import get_coordinates_data, get_population_data, get_population_density_data, get_income_data, get_education_data, get_activity_data, get_population_counts_and_average_ages, get_population_counts_and_surface_areas, get_coordinates_and_postal_codes, get_median_incomes, get_area_names, get_activity_percentages, convert_to_lat_lon
 import folium
 from folium.plugins import HeatMap
 import plotly.graph_objs as go
-from data_handler import get_coordinates_data, get_population_data, get_population_density_data, get_income_data, get_education_data, get_activity_data, get_population_counts_and_average_ages, get_population_counts_and_surface_areas, get_coordinates_and_postal_codes, get_median_incomes, get_area_names, get_activity_percentages, convert_to_lat_lon
+
 
 # Read JSON data using the data_handler module
 coordinates_data = get_coordinates_data()
@@ -35,7 +36,7 @@ for postal_code in postal_codes:
         x_coordinate = coordinates[coordinates_index * 2]
         y_coordinate = coordinates[coordinates_index * 2 + 1]
         
-        # Get latitude and longitude from coordinates using the function from data_handler.py
+        # Get latitude and longitude
         latitude, longitude = convert_to_lat_lon(x_coordinate, y_coordinate)
 
         # Set marker size based on population count
@@ -267,7 +268,7 @@ def update_folium_map(layer):
                 marker_color = 'orange'
                 
                 # Add a marker with information popup
-                popup_text = f"<b>{area_name}</b><div style='display:flex; flex-direction: row;'><div style='margin-right:10px;'>Population:</div><div>{population_count[coordinates_index]}</div></div><div style='display:flex; flex-direction: row;'><div style='margin-right:10px;'>Average age:</div><div>{average_age[coordinates_index]}</div></div>"
+                popup_text = f"<b>{area_name}</b><div style='display:flex; flex-direction: row;'><div style='margin-right:10px;'>Surface Area (km²):</div><div>{surface_areas_km2[coordinates_index]:.2f}</div></div><div style='display:flex; flex-direction: row;'><div style='margin-right:10px;'>Population:</div><div>{population_count[coordinates_index]}</div></div><div style='display:flex; flex-direction: row;'><div style='margin-right:10px;'>Average Age:</div><div>{average_age[coordinates_index]}</div></div><div style='display:flex; flex-direction: row;'><div style='margin-right:10px;'>Median Income:</div><div>{median_incomes[coordinates_index]}</div></div>"
                 
                 folium.CircleMarker(
                     [latitude, longitude],
