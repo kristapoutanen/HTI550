@@ -2,150 +2,26 @@ import dash
 from dash import html, dcc, Input, Output
 import folium
 from folium.plugins import HeatMap
-import json
-import os
 import plotly.graph_objs as go
-import pyproj
+from data_handler import get_coordinates_data, get_population_data, get_population_density_data, get_income_data, get_education_data, get_activity_data, get_population_counts_and_average_ages, get_population_counts_and_surface_areas, get_coordinates_and_postal_codes, get_median_incomes, get_area_names, get_activity_percentages, convert_to_lat_lon
 
-# Get the current directory
-current_dir = os.path.dirname(__file__)
+# Read JSON data using the data_handler module
+coordinates_data = get_coordinates_data()
+population_data = get_population_data()
+populationDensity_data = get_population_density_data()
+income_data = get_income_data()
+education_data = get_education_data()
+activity_data = get_activity_data()
 
-# Paths to the JSON files
-coordinate_file = os.path.join(current_dir, 'koordinaatit.json')
-population_file = os.path.join(current_dir, 'populaatio.json')
-populationDensity_file = os.path.join(current_dir, 'asukastiheys.json')
-income_file = os.path.join(current_dir, 'tulot.json')
-education_file = os.path.join(current_dir, 'koulutus.json')
-activity_file = os.path.join(current_dir, 'toiminta.json')
 
-# Read the JSON data for coordinate data
-with open(coordinate_file, 'r', encoding='utf-8') as file:
-    coordinates_data = json.load(file)
+# Get data using the data_handler module
+coordinates, postal_codes = get_coordinates_and_postal_codes(coordinates_data)
+median_incomes = get_median_incomes(income_data)
+population_count, average_age = get_population_counts_and_average_ages(population_data)
+population_counts, surface_areas_km2 = get_population_counts_and_surface_areas(populationDensity_data)
+activityPercentages_by_area = get_activity_percentages(activity_data, postal_codes)
+area_names = get_area_names()
 
-# Read the JSON data for population data
-with open(population_file, 'r', encoding='utf-8') as file:
-    population_data = json.load(file)
-
-# Read the JSON data for population density data
-with open(populationDensity_file, 'r', encoding='utf-8') as file:
-    populationDensity_data = json.load(file)
-
-# Read the JSON data for income data
-with open(income_file, 'r', encoding='utf-8') as file:
-    income_data = json.load(file)
-
-# Read the JSON data for education data
-with open(education_file, 'r', encoding='utf-8') as file:
-    education_data = json.load(file)
-
-# Read the JSON data for activity data
-with open(activity_file, 'r', encoding='utf-8') as file:
-    activity_data = json.load(file)
-
-# Get coordinates and postal codes from the JSON data
-coordinates = coordinates_data['dataset']['value']
-postal_codes = coordinates_data['dataset']['dimension']['Postinumeroalue']['category']['index']
-
-# Get median incomes from the JSON data
-median_incomes = income_data['dataset']['value']
-
-# Get population counts and average ages from the JSON data
-population_count = population_data['dataset']['value'][::4]
-average_age = population_data['dataset']['value'][3::4]
-
-# Get population counts and surface areas from the JSON data
-surface_areas_m2 = populationDensity_data['dataset']['value'][::2]
-population_counts = populationDensity_data['dataset']['value'][1::2]
-
-# Convert surface areas from square meters to square kilometers
-surface_areas_km2 = [area / 1000000 for area in surface_areas_m2]
-
-# Convert population counts from decimals to integers
-population_counts = [int(count) for count in population_counts]
-
-# Get population counts for different activity groups from the JSON data
-postal_codes = activity_data['dataset']['dimension']['Postinumeroalue']['category']['index']
-population_count = activity_data['dataset']['value'][::7]
-
-employed_counts = activity_data['dataset']['value'][1::7]
-unemployed_counts = activity_data['dataset']['value'][2::7]
-children_counts = activity_data['dataset']['value'][3::7]
-student_counts = activity_data['dataset']['value'][4::7]
-retired_counts = activity_data['dataset']['value'][5::7]
-other_counts = activity_data['dataset']['value'][6::7]
-
-# Create a dict for activity percentages for each postal code area
-activityPercentages_by_area = {}
-
-# Calculate percentages for different activity groups for each postal code area
-for postal_code in postal_codes:
-    postal_code_str = str(postal_code)
-    area_population_index = postal_codes[postal_code]
-    total_population = population_count[area_population_index]
-
-    employed_percentage = employed_counts[area_population_index] / total_population * 100
-    unemployed_percentage = unemployed_counts[area_population_index] / total_population * 100
-    kids_percentage = children_counts[area_population_index] / total_population * 100
-    student_percentage = student_counts[area_population_index] / total_population * 100
-    retired_percentage = retired_counts[area_population_index] / total_population * 100
-    other_percentage = other_counts[area_population_index] / total_population * 100
-
-    activityPercentages_by_area[postal_code_str] = {
-        "Employed": employed_percentage,
-        "Unemployed": unemployed_percentage,
-        "Kids": kids_percentage,
-        "Students": student_percentage,
-        "Retired": retired_percentage,
-        "Other": other_percentage
-    }
-
-# Create a dict for postal area names and postal area codes
-area_names = {
-    "33100": "Tampere Keskus",
-    "33180": "Lapinniemi-Käpylä",
-    "33200": "Tampere Keskus Läntinen",
-    "33210": "Itä-Amuri-Tammerkoski",
-    "33230": "Länsi-Amuri",
-    "33240": "Tahmela",
-    "33250": "Pispala",
-    "33270": "Epilä",
-    "33300": "Rahola",
-    "33310": "Tesoma",
-    "33330": "Myllypuro-Kalkku",
-    "33340": "Haukiluoma-Ikuri",
-    "33400": "Luoteis-Tampere",
-    "33410": "Lentävänniemi",
-    "33420": "Lamminpää",
-    "33500": "Osmonmäki-Petsamo",
-    "33520": "Keskussairaala-alue-Kauppi",
-    "33530": "Kissanmaa",
-    "33540": "Kaleva",
-    "33560": "Takahuhti",
-    "33580": "Atala-Linnainmaa",
-    "33610": "Olkahinen-Tasanne",
-    "33680": "Aitolahti",
-    "33700": "Messukylä",
-    "33710": "Kaukajärvi",
-    "33720": "Hervanta",
-    "33730": "Leinola-Vehmainen",
-    "33800": "Nekala",
-    "33820": "Koivistonkylä",
-    "33840": "Peltolammi",
-    "33850": "Multisilta",
-    "33870": "Vuores",
-    "33900": "Härmälä-Rantaperkiö",
-    "34240": "Kämmenteisko",
-    "34260": "Terälahti",
-    "34270": "Velaatta"
-}
-
-# Define the EUREF-FIN (ETRS-TM35FIN) projection
-transformer_etrs_tm35fin_to_wgs84 = pyproj.Transformer.from_crs('EPSG:3067', 'EPSG:4326', always_xy=True)
-
-# Define a function to convert x and y coordinates to latitude and longitude
-def convert_to_lat_lon(x_coord, y_coord):
-    lon, lat = transformer_etrs_tm35fin_to_wgs84.transform(x_coord, y_coord)
-    return lat, lon
 
 # Create a folium Map centered around Tampere
 m = folium.Map(location=(61.4978, 23.7610), zoom_start=12)
@@ -159,7 +35,7 @@ for postal_code in postal_codes:
         x_coordinate = coordinates[coordinates_index * 2]
         y_coordinate = coordinates[coordinates_index * 2 + 1]
         
-        # Get latitude and longitude from coordinates
+        # Get latitude and longitude from coordinates using the function from data_handler.py
         latitude, longitude = convert_to_lat_lon(x_coordinate, y_coordinate)
 
         # Set marker size based on population count
@@ -308,7 +184,7 @@ def update_education_pie_chart(click_data):
         hoverinfo='label+percent'
     )
     
-    # Define layout for pie chart
+    # Define layout for education level distribution pie chart
     layout_pie = go.Layout(
         title=f'Education Level Distribution in {area_names.get(selected_area, "Tampere Keskus")}',
         plot_bgcolor='#f2f2f2',
@@ -349,7 +225,7 @@ def update_activity_pie_chart(click_data):
         hoverinfo='label+percent'
     )
     
-    # Define layout for pie chart
+    # Define layout for activity distribution pie chart
     layout_pie = go.Layout(
         title=f'Activity Distribution in {area_names.get(selected_area, "Tampere Keskus")}',
         plot_bgcolor='#f2f2f2',
@@ -366,12 +242,13 @@ def update_activity_pie_chart(click_data):
     Output('folium-map', 'srcDoc'),
     [Input('layer-dropdown', 'value')]
 )
+
 def update_folium_map(layer):
     # Create a folium Map centered around Tampere
     m = folium.Map(location=(61.4978, 23.7610), zoom_start=12)
-
+    
+    # Add general information layer
     if layer == 'general':
-        # Add general information layer
         for postal_code in postal_codes:
             postal_code_str = str(postal_code)
             area_name = area_names.get(postal_code_str)
@@ -380,13 +257,13 @@ def update_folium_map(layer):
                 x_coordinate = coordinates[coordinates_index * 2]
                 y_coordinate = coordinates[coordinates_index * 2 + 1]
                 
-                # Get latitude and longitude from coordinates
+                # Get latitude and longitude
                 latitude, longitude = convert_to_lat_lon(x_coordinate, y_coordinate)
 
                 # Calculate marker size based on population count
                 marker_size = population_count[coordinates_index] / 500
                 
-                # Set marker color to to orange
+                # Set marker color
                 marker_color = 'orange'
                 
                 # Add a marker with information popup
@@ -401,9 +278,9 @@ def update_folium_map(layer):
                     popup=popup_text,
                     max_width=300
                 ).add_to(m)
-    
+                
+    # Add heatmap layer
     elif layer == 'heatmap':
-        # Add heatmap layer
         populationDensity_heatmapData = [[convert_to_lat_lon(coordinates[i*2], coordinates[i*2+1])[0], 
                       convert_to_lat_lon(coordinates[i*2], coordinates[i*2+1])[1],
                       population_counts[i] / surface_areas_km2[i]] for i in range(len(postal_codes))]
